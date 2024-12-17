@@ -1,0 +1,13 @@
+cd C:\kafka\bin
+
+.\windows\zookeeper-server-start.bat ..\config\zookeeper.properties
+
+.\windows\kafka-server-start.bat ..\config\server.properties
+
+Buat topik
+.\windows\kafka-topics.bat --create --topic sensor-telemetry --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+
+.\windows\kafka-console-consumer.bat --topic sensor-telemetry --from-beginning --bootstrap-server localhost:9092
+
+cd C:\MinIO
+minio.exe server C:\MinIO\data 
