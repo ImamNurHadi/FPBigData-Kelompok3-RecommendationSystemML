@@ -181,7 +181,7 @@ Hal ini dilakukan untuk monitoring setiap proses perpindahan data.
         except KeyboardInterrupt:
             logger.info("Pemindaian dihentikan.")
             
-### Ini sialisasi minio Client
+### Inisialisasi minio Client
 
     # Inisialisasi MinIO client
     minio_client = Minio(
