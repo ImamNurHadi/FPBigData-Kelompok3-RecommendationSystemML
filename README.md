@@ -198,3 +198,108 @@ Hal ini dilakukan untuk monitoring setiap proses perpindahan data.
         start_scanning(minio_client)
 
 `
+
+
+# Web index.html
+
+Halaman web sederhana untuk memberikan rekomendasi film berdasarkan input pengguna.
+
+## Struktur Dasar HTML
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekomendasi Film</title>
+</head>
+<body>
+  <!-- Konten utama ada di sini -->
+</body>
+</html>
+```
+Struktur dasar HTML untuk halaman web.
+
+## Latar Belakang Animasi
+```
+<div class="background">
+  <div class="background-row">
+    <img src="Thumbnail1.png" alt="Thumbnail 1">
+    <img src="Thumbnail2.png" alt="Thumbnail 2">
+    <img src="Thumbnail3.png" alt="Thumbnail 3">
+  </div>
+</div>
+```
+Menampilkan gambar film sebagai animasi latar belakang bergerak.
+## Header
+```
+<header>
+  <h1>Rekomendasi Film</h1>
+</header>
+```
+Judul halaman di bagian atas.
+
+## Formulir Pencarian
+
+```
+<div class="search-section">
+  <form action="/recommend" method="post">
+    <label for="genre">Genre:</label>
+    <input type="text" id="genre" name="genre" required>
+    <label for="rating">Rating Minimum:</label>
+    <input type="text" id="rating" name="rating" required>
+    <label for="age">Usia:</label>
+    <input type="text" id="age" name="age" required>
+    <button type="submit">Cari Rekomendasi</button>
+  </form>
+</div>
+```
+Formulir untuk pengguna memasukkan preferensi pencarian film.
+
+## Hasil Rekomendasi
+```
+<div class="results">
+  {% for recommendation_row in recommendations|batch(3) %}
+  <div class="row">
+    {% for recommendation in recommendation_row %}
+    <div class="card">
+      <img src="{{ recommendation.poster_url }}" alt="Poster">
+      <h3>{{ recommendation.name_of_show }}</h3>
+      <p>Genre: {{ recommendation.genre }}</p>
+      <p>Rating: {{ recommendation.imdb_rating }}</p>
+      <p>Usia: {{ recommendation.age_of_viewers }}</p>
+      <button>Tambah ke Favorit</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+```
+Menampilkan daftar rekomendasi dalam format card.
+## Footer
+```
+<footer>
+  <a href="#">Big Data</a>
+  <a href="#">Kelompok</a>
+</footer>
+```
+# CSS
+```
+body {
+  font-family: Arial, sans-serif;
+  color: #fff;
+  background-color: #1a1a1a;
+  margin: 0;
+  padding: 0;
+}
+
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+```
+Mengatur tema gelap, animasi, dan tata letak responsif.
