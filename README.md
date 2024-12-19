@@ -9,6 +9,151 @@
 | 5  | Rizki Ramadhani          | 5027221013 |
 
 
+## Kafka Producer: Mengirimkan Data CSV dan Gambar
+1. **Producer Data CSV:** Membaca data dari file CSV dan mengirim setiap baris ke topik Kafka.
+2. **Producer Data Gambar:** Membaca gambar dari folder, meng-encode ke Base64, dan mengirimnya ke topik Kafka dengan metadata.
+3. **Multi-threading:** Producer data CSV dan gambar berjalan secara bersamaan.
+4. **Penghentian Aman:** Mendukung penghentian thread secara aman menggunakan event.
+
+## Struktur File
+```
+project/
+├── Dataset/
+│   ├── amazon_prime_tv_show_dataset.csv
+├── dataset/
+│   ├── Image_dataset/
+│       ├── image1.jpg
+│       ├── image2.png
+├── producer.py
+```
+
+## Prasyarat
+1. **Python**: Versi 3.6+
+2. **Kafka**: Kafka broker yang berjalan (localhost:9092 pada contoh ini)
+3. **Library Python**:
+   - kafka-python
+   - json
+   - csv
+   - os
+   - base64
+   - threading
+   - time
+
+Instal library Python yang diperlukan:
+```bash
+pip install kafka-python
+```
+
+## Penjelasan Kode
+
+### 1. Producer Data CSV
+Membaca baris dari file CSV dan mengirimkannya ke Kafka.
+```python
+def send_csv_data(producer, topic, stop_event):
+    last_processed_row = 0
+    while not stop_event.is_set():
+        with open('./Dataset/amazon_prime_tv_show_dataset.csv', 'r') as file:
+            reader = csv.DictReader(file)
+            for _ in range(last_processed_row):
+                next(reader)
+            for row in reader:
+                if stop_event.is_set():
+                    print("Pengiriman CSV dihentikan.")
+                    return
+                producer.send(topic, row)
+                last_processed_row += 1
+                print("Mengirim data CSV:", row)
+        time.sleep(1)
+```
+
+### 2. Producer Data Gambar
+Membaca file gambar, meng-encode ke Base64, dan mengirimkannya ke Kafka dengan metadata.
+```python
+def send_image_data(producer, topic, stop_event):
+    processed_images = set()
+    image_folder = './dataset/Image_dataset'
+
+    while not stop_event.is_set():
+        for image_name in os.listdir(image_folder):
+            if stop_event.is_set():
+                print("Pengiriman gambar dihentikan.")
+                return
+            if image_name not in processed_images:
+                image_path = os.path.join(image_folder, image_name)
+                if os.path.isfile(image_path):
+                    with open(image_path, 'rb') as image_file:
+                        image_data = image_file.read()
+                        encoded_image_data = base64.b64encode(image_data).decode('utf-8')
+                        film_name = os.path.splitext(image_name)[0]
+
+                        producer.send(
+                            topic, 
+                            {
+                                'image_name': image_name, 
+                                'image_data': encoded_image_data,
+                                'Name of the show': film_name
+                            }
+                        )
+                        processed_images.add(image_name)
+                        print(f"Mengirim gambar: {image_name} dengan Nama Film: {film_name}")
+        time.sleep(1)
+```
+
+### 3. Inisialisasi Kafka Producer
+Membuat Kafka producer untuk men-serialize data sebagai JSON.
+```python
+producer = KafkaProducer(
+    bootstrap_servers='localhost:9092',
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+```
+
+### 4. Program Utama
+Mengatur threading dan penghentian aman.
+```python
+topic_name = 'big-data-fp10'
+stop_event = threading.Event()
+
+thread_csv = threading.Thread(target=send_csv_data, args=(producer, topic_name, stop_event))
+thread_images = threading.Thread(target=send_image_data, args=(producer, topic_name, stop_event))
+
+thread_csv.start()
+thread_images.start()
+
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    stop_event.set()
+
+thread_csv.join()
+thread_images.join()
+producer.close()
+print("Data dari CSV dan folder gambar berhasil dikirim ke Kafka.")
+```
+
+## Cara Menjalankan
+1. Pastikan Kafka berjalan pada `localhost:9092`.
+2. Letakkan file CSV di folder `Dataset/`.
+3. Letakkan file gambar di folder `dataset/Image_dataset/`.
+4. Jalankan skrip producer:
+```bash
+python producer.py
+```
+5. Untuk menghentikan skrip, tekan `Ctrl+C`. Ini akan menghentikan semua thread secara aman.
+
+## Contoh Output
+```
+Mengirim data CSV: {'Title': 'Example Show', 'Genre': 'Drama'}
+Mengirim gambar: image1.jpg dengan Nama Film: image1
+Mengirim gambar: image2.png dengan Nama Film: image2
+```
+
+## Catatan
+- Pastikan jalur folder dan konfigurasi topik Kafka sudah benar.
+- Sesuaikan interval waktu (`time.sleep()`) sesuai kebutuhan.
+- Tambahkan penanganan kesalahan untuk meningkatkan keandalan di lingkungan produksi.
+
 ## Filtering
 
 `
