@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekomendasi Film</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      background-color: #1a1a1a;
+      overflow-x: hidden;
+    }
+
+    .background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      opacity: 0.1;
+    }
+
+    .background-row {
+      display: flex;
+      animation: slide 20s linear infinite;
+    }
+
+    .background img {
+      width: 150px;
+      height: auto;
+      margin-right: 20px;
+      opacity: 0.7;
+    }
+
+    @keyframes slide {
+      0% {
+        transform: translateX(100%);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+      background: rgba(44, 44, 60, 0.8);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 1;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+    }
+
+    .search-section {
+      text-align: center;
+      padding: 40px 20px;
+      background: rgba(44, 44, 60, 0.8);
+      position: relative;
+      z-index: 1;
+    }
+
+    .search-section input, .search-section button {
+      margin: 10px;
+      padding: 12px 18px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .search-section button {
+      background-color: #0078d7;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .search-section button:hover {
+      background-color: #005bb5;
+    }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between; /* Distributes items with even spacing */
+      gap: 20px;
+    }
+
+    .card {
+      flex: 1; /* Ensures equal width for cards */
+      background-color: rgba(44, 44, 60, 0.9);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin: 10px 0;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .card button {
+      background-color: #0078d7;
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .card button:hover {
+      background-color: #005bb5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: rgba(44, 44, 60, 0.8);
+      position: relative;
+      z-index: 1;
+    }
+
+    footer a {
+      color: #0078d7;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Rekomendasi Film</h1>
+  </header>
+
+  <div class="search-section">
+    <form action="/recommend" method="post">
+      <label for="genre">Genre:</label>
+      <input type="text" id="genre" name="genre" required>
+      <label for="rating">Rating Minimum:</label>
+      <input type="text" id="rating" name="rating" required>
+      <label for="age">Usia:</label>
+      <input type="text" id="age" name="age" required>
+      <button type="submit">Cari Rekomendasi</button>
+    </form>
+  </div>
+
+  {% if recommendations %}
+  <div class="results">
+    {% for recommendation_row in recommendations|batch(3) %}
+    <div class="row">
+      {% for recommendation in recommendation_row %}
+      <div class="card">
+        <img src="{{ recommendation.poster_url }}" alt="Poster">
+        <h3>{{ recommendation.name_of_show }}</h3>
+        <p>Genre: {{ recommendation.genre }}</p>
+        <p>Rating: {{ recommendation.imdb_rating }}</p>
+        <p>Usia: {{ recommendation.age_of_viewers }}</p>
+        <button>Tambah ke Favorit</button>
+        <button onclick="window.location.href='/details/{{ recommendation.name_of_show }}'">Lihat Selengkapnya</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <footer>
+    <a href="#">Big Data</a>
+    <a href="#">Kelompok</a>
+  </footer>
+</body>
+</html>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const detailButtons = document.querySelectorAll('.details-btn');
+      detailButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const movieName = button.getAttribute('data-id');
+  
+          // AJAX request ke endpoint untuk mendapatkan detail
+          fetch(`/details/${movieName}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                // Menampilkan data detail film
+                const details = data.details.map(detail => `
+                  <p><strong>${detail['Name of the show']}:</strong> ${detail['Genre']}, Rating: ${detail['IMDb rating']}, Usia: ${detail['Age of viewers']}</p>
+                `).join('');
+                alert(`Detail Film:\n${details}`);
+              }
+            })
+            .catch(err => console.error('Error:', err));
+        });
+      });
+    });
+  </script>
+  

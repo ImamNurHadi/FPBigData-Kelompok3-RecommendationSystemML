@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Film</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        color: #fff;
+        background-color: #1a1a1a;
+        overflow-x: hidden;
+      }
+
+      .background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        opacity: 0.1;
+      }
+
+      .background-row {
+        display: flex;
+        animation: slide 20s linear infinite;
+      }
+
+      .background img {
+        width: 150px;
+        height: auto;
+        margin-right: 20px;
+        opacity: 0.7;
+      }
+
+      @keyframes slide {
+        0% {
+          transform: translateX(100%);
+        }
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+
+      header {
+        text-align: center;
+        padding: 20px;
+        background: rgba(44, 44, 60, 0.8);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 1;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: bold;
+      }
+
+      .container {
+        text-align: center;
+        padding: 40px 20px;
+        background: rgba(44, 44, 60, 0.8);
+        position: relative;
+        z-index: 1;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .card {
+        background-color: rgba(44, 44, 60, 0.9);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .card img {
+        width: 100%;
+        border-radius: 10px;
+        margin-bottom: 15px;
+      }
+
+      .card p {
+        font-size: 16px;
+        color: #aaa;
+        margin: 10px 0;
+      }
+
+      button {
+        background-color: #0078d7;
+        color: #fff;
+        padding: 12px 18px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #005bb5;
+      }
+
+      footer {
+        text-align: center;
+        padding: 20px;
+        background: rgba(44, 44, 60, 0.8);
+        position: relative;
+        z-index: 1;
+      }
+
+      footer a {
+        color: #0078d7;
+        text-decoration: none;
+        margin: 0 10px;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+</head>
+<body>
+  <header>
+    <h1>Detail Film: {{ movie['Name of the show'] }}</h1>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      {% if movie['image_url'] %}
+        <img src="{{ movie['image_url'] }}" alt="Image for {{ movie['Name of the show'] }}" />
+      {% else %}
+        <p>No image available.</p>
+      {% endif %}
+      <p><strong>Judul:</strong> {{ movie['Name of the show'] }}</p>
+      <p><strong>Genre:</strong> {{ movie['Genre'] }}</p>
+      <p><strong>IMDb Rating:</strong> {{ movie['IMDb rating'] }}</p>
+      <p><strong>Bahasa:</strong> {{ movie['Language'] }}</p>
+      <p><strong>Usia Penonton:</strong> {{ movie['Age of viewers'] }}</p>
+      <p><strong>Tahun Rilis:</strong> {{ movie['Year of release'] }}</p>
+      <p><strong>Jumlah Season Tersedia:</strong> {{ movie['No of seasons available'] }}</p>
+      
+    </div>
+    <button onclick="window.location.href='/'">Kembali ke Beranda</button>
+  </div>
+
+  <footer>
+    <a href="#">Big Data</a>
+    <a href="#">Kelompok</a>
+  </footer>
+</body>
+</html>

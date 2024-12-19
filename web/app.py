@@ -4,10 +4,21 @@ import psycopg2
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 import logging
+from minio import Minio
+import os
+import re
 
 # Konfigurasi logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize MinIO client
+minio_client = Minio(
+    "192.168.242.1:9000",  # Ganti dengan host MinIO Anda
+    access_key="Uh396Kv9HYw7Blo2QQFz",  # Ganti dengan access key Anda
+    secret_key="3TA2hET1CaJLuOqQDrjQon9zxb3Zn290wrqIuFEm",  # Ganti dengan secret key Anda
+    secure=False  # Atur ke True jika menggunakan HTTPS
+)
 
 app = Flask(__name__)
 
@@ -37,6 +48,13 @@ def preprocess_data(df):
     df = df.drop_duplicates(subset='name_of_show')  
     
     return df
+
+def clean_filename(name):
+    """Clean file or folder names to make them filesystem-safe."""
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+    name = name.replace("'", "")
+    name = name.replace(":", "_")
+    return name
 
 def train_model(df):
     """Melatih model Machine Learning."""
@@ -109,6 +127,48 @@ def recommend():
     
     # Render hasil rekomendasi ke template
     return render_template('index.html', recommendations=recommendations_list)
+
+@app.route('/details/<movie_name>', methods=['GET'])
+def movie_details(movie_name):
+    bucket_name = "movie"
+    unfiltered_folder = "unfiltered"
+    try:
+        # Cari file CSV terkait di MinIO
+        objects = minio_client.list_objects(bucket_name, prefix=unfiltered_folder, recursive=True)
+        for obj in objects:
+            if obj.object_name.endswith('.csv'):
+                # Unduh file CSV
+                local_temp_path = os.path.join('temp', 'movie_details.csv')
+                minio_client.fget_object(bucket_name, obj.object_name, local_temp_path)
+
+                # Baca file CSV untuk mencari detail film
+                df = pd.read_csv(local_temp_path, encoding='utf-8')
+                movie_details = df[df['Name of the show'].str.contains(movie_name, case=False)]
+
+                if not movie_details.empty:
+                    # Ambil detail film sebagai dictionary
+                    movie = movie_details.iloc[0].to_dict()
+
+                    # Cari file gambar terkait di folder film
+                    film_folder = f"{unfiltered_folder}/{clean_filename(movie_name.replace(' ', '_'))}"
+                    image_url = None
+
+                    # Cek gambar dengan ekstensi .jpg
+                    for obj in minio_client.list_objects(bucket_name, prefix=film_folder, recursive=True):
+                        if obj.object_name.endswith('.jpg'):
+                            # Buat URL gambar tanpa presigned URL
+                            image_url = f'http://192.168.242.1:9000/{bucket_name}/{obj.object_name}'
+                            break
+
+                    # Tambahkan URL gambar ke movie
+                    movie['image_url'] = image_url
+                    return render_template('details.html', movie=movie)
+
+        return render_template('details.html', movie=None, message=f"Detail untuk {movie_name} tidak ditemukan.")
+
+    except Exception as e:
+        logger.error(f"Error saat mengambil detail film: {e}")
+        return render_template('details.html', movie=None, message="Terjadi kesalahan dalam pengambilan detail film.")
 
 if __name__ == '__main__':
     app.run(debug=True)
