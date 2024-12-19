@@ -149,17 +149,144 @@ Mengirim gambar: image1.jpg dengan Nama Film: image1
 Mengirim gambar: image2.png dengan Nama Film: image2
 ```
 
-## Consumer
-
-
 ## Catatan
 - Pastikan jalur folder dan konfigurasi topik Kafka sudah benar.
 - Sesuaikan interval waktu (`time.sleep()`) sesuai kebutuhan.
 - Tambahkan penanganan kesalahan untuk meningkatkan keandalan di lingkungan produksi.
 
+## Consumer
+
+Fungsi utama mengambil dataset yang sudah dikirim ke kafka server dan memasukanya ke minio sesaui dengna strukur kode yang ada
+
+- Lakehouse
+- --------- Unfiltered
+- -------------------- ( Folder Nama Film)
+- ---------------------------------------- (CSV film dan foto film yang sesuai))
+
+### Penjelasan kode
+
+1. Di sini, kode melakukan inisialisasi dengan menghubungkan ke Kafka dan Minio, serta menghapus format nama yang lama dan menggantinya dengan format nama yang sesuai, misalnya Naruto: Shippuden menjadi Naruto_Shippuden
+```python
+# Kafka consumer initialization
+consumer = KafkaConsumer(
+    'big-data-fp10', 
+    bootstrap_servers='localhost:9092',
+    value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+    auto_offset_reset='earliest',
+    enable_auto_commit=True
+)
+
+# Initialize MinIO client
+minio_client = Minio(
+    "192.168.242.1:9000",  # Ganti dengan host MinIO Anda
+    access_key="Uh396Kv9HYw7Blo2QQFz",  # Ganti dengan access key Anda
+    secret_key="3TA2hET1CaJLuOqQDrjQon9zxb3Zn290wrqIuFEm",  # Ganti dengan secret key Anda
+    secure=False  # Atur ke True jika menggunakan HTTPS
+)
+
+def clean_filename(name):
+    """Clean file or folder names to make them filesystem-safe."""
+    name = re.sub(r'[<>:"/\\|?*]', '_', name)
+    name = name.replace("'", "")
+    name = name.replace(":", "_")
+    return name
+```
+2. Di bagian ini, kode mereplace data yang valuenya "NaN" dengan default value. Selain itu, kode juga mengupload dataset tadi ke server Minio sesuai dengan format yang telah disebutkan di atas.
+```python
+def remove_nan(data, default_value="N/A"):
+    """Replaces NaN values in a dictionary with a default value."""
+    return {key: (value if not isinstance(value, float) or not math.isnan(value) else default_value)
+            for key, value in data.items()}
+
+def upload_to_minio(file_path, bucket_name, object_name):
+    """Upload file to MinIO."""
+    try:
+        minio_client.fput_object(bucket_name, object_name, file_path)
+        print(f"File '{file_path}' uploaded to MinIO as '{object_name}' in bucket '{bucket_name}'.")
+    except S3Error as e:
+        print(f"Error uploading file to MinIO: {e}")
+```
+
+3. Untuk keperluan debugging kode, juga menyimpan hasil dari pengelompokan data ke local storage, serta membaca path_file agar tidak terjadi duplikasi antar data.
+```python
+# Base folder for saving data
+base_folder = 'Lakehouse'
+if not os.path.exists(base_folder):
+    os.makedirs(base_folder)
+
+# Path for CSV to store metadata
+path_file = os.path.join(base_folder, 'path_film.csv')
+
+# Read existing paths to avoid duplicates
+existing_paths = set()
+if os.path.exists(path_file):
+    with open(path_file, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  
+        for row in reader:
+            existing_paths.add(row[1])  # Add the path (second column) to the set
+```
+
+3. Consumer dijalankan secara real-time tanpa bisa dihentikan kecuali kita hentikan secara manual. Tujuannya adalah untuk terus membaca dataset yang ada. Jadi, ketika ada perubahan pada dataset, consumer dapat langsung membaca dan memasukkannya ke MinIO dan local storage.
+```python
+for message in consumer:
+    show_data = message.value 
+
+    if 'image_name' in show_data and 'image_data' in show_data:
+        # Handle image data
+        film_name = clean_filename(show_data.get('Name of the show', 'Unknown_Show').replace(" ", "_"))
+        film_folder = os.path.join(base_folder, 'unfiltered', film_name)  # Store in the 'unfiltered' folder
+        if not os.path.exists(film_folder):
+            os.makedirs(film_folder)
+
+        image_name = clean_filename(show_data['image_name'])
+        image_path = os.path.join(film_folder, image_name)
+
+        # Decode base64 image data and save as file
+        with open(image_path, 'wb') as image_file:
+            image_file.write(base64.b64decode(show_data['image_data']))
+
+        print(f"Gambar '{image_name}' berhasil disimpan di {image_path}")
+
+        # Upload the image to MinIO (under 'unfiltered' folder)
+        upload_to_minio(image_path, 'movie', f'unfiltered/{film_name}/{image_name}')
+
+    else:
+        # Handle CSV data
+        show_data = remove_nan(show_data)
+        film_name = clean_filename(show_data.get('Name of the show', 'Unknown_Show').replace(" ", "_"))
+        film_folder = os.path.join(base_folder, 'unfiltered', film_name)  # Store in the 'unfiltered' folder
+
+        if not os.path.exists(film_folder):
+            os.makedirs(film_folder)
+
+        file_path = os.path.join(film_folder, f"{film_name}.csv")
+
+        if file_path in existing_paths:
+            continue
+
+        with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=show_data.keys())
+            writer.writeheader()
+            writer.writerow(show_data)
+
+        with open(path_file, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([film_name, file_path])
+
+        existing_paths.add(file_path)
+        print(f"Data untuk film '{show_data['Name of the show']}' berhasil disimpan di {file_path}")
+
+        # Upload the CSV to MinIO (under 'unfiltered' folder)
+        upload_to_minio(file_path, 'movie', f'unfiltered/{film_name}/{film_name}.csv')
+        print(f"Path untuk film '{show_data['Name of the show']}' disimpan di {path_file}")
+```
+## Catatan
+- Penyimpanan local storage dimasukkan hanya untuk keperluan debugging
+
 ## Filtering
 
-`
+'
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
     logger = logging.getLogger(__name__)
