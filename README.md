@@ -149,6 +149,9 @@ Mengirim gambar: image1.jpg dengan Nama Film: image1
 Mengirim gambar: image2.png dengan Nama Film: image2
 ```
 
+## Consumer
+
+
 ## Catatan
 - Pastikan jalur folder dan konfigurasi topik Kafka sudah benar.
 - Sesuaikan interval waktu (`time.sleep()`) sesuai kebutuhan.
