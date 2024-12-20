@@ -9,6 +9,20 @@
 | 5  | Rizki Ramadhani          | 5027221013 |
 
 
+## Arsitektur Diagram yang Digunakan
+![arsitektur_image](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/Arsitektur.png?raw=true)
+Dimana Minio digunakan sebagai DataLakehouse yang akan menyimpan raw data, serta data yang sudah difilter (bersih). Data yang sudah difilter tersebut akan dibawa menuju PostgreSQL untuk disimpan, Machine Learning hanya akan menggunakan data bersih tersebut untuk ditraining sehingga menghasilkan rekomendasi film yang diinginkan.  
+
+## Penggunaan PostgreSQL
+![PostgreSQL](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/PostgreSQL.png?raw=true)
+
+## Penggunaan Minio
+![MinioALL](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/MinioALL.png?raw=true)
+![MinioUnfiltered](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/MinioUnfiltered.png?raw=true)
+![MinioUnfilteredFile](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/MinioUnfilteredFile.png?raw=true)
+![MinioFiltered](https://github.com/ImamNurHadi/FPBigData-Kelompok3-RecommendationSystemML/blob/main/MinioFiltered.png?raw=true)
+
+
 ## Kafka Producer: Mengirimkan Data CSV dan Gambar
 1. **Producer Data CSV:** Membaca data dari file CSV dan mengirim setiap baris ke topik Kafka.
 2. **Producer Data Gambar:** Membaca gambar dari folder, meng-encode ke Base64, dan mengirimnya ke topik Kafka dengan metadata.
